@@ -30,12 +30,7 @@ def list_instances(project) -> None:
 
     for i in ec2_instances:
         tags = {tag['Key']: tag['Value'] for tag in i.tags or []}
-        print(', '.join((i.id,
-                         i.instance_type,
-                         i.placement['AvailabilityZone'],
-                         i.state['Name'],
-                         i.public_dns_name,
-                         tags.get('Project', '<no project>'))))
+        print(', '.join((i.id, i.instance_type, i.placement['AvailabilityZone'], i.state['Name'], i.public_dns_name, tags.get('Project', '<no project>'))))
     return
 
 
