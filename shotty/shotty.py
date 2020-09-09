@@ -1,54 +1,65 @@
 import boto3
 import click
 
-session = boto3.Session(profile_name='shotty')
-ec2 = session.resource('ec2')
+session = boto3.Session(profile_name='default')
+ec2 = session.client('ec2')
+response = ec2.describe_instances()
+print(response)
 
 
-@click.command()
-@click.option('--project', default=None,
-              help="Only instance for project (tag Project: <name>)")
-def list_instances():
-    "List EC2 instances"
-    instances = []
-
+def filter_instances(project):
+    """Filter EC2 instances based on Project tag"""
     if project:
         filters = [{'Name': 'tag:Project', 'Values': [project]}]
-        instances = ec2.instances.filter(Filters=filters)
+        ec2_instances = ec2.instances.filter(Filters=filters)
     else:
-        instances = ec2.instances.all()
+        ec2_instances = ec2.instances.all()
+    return ec2_instances
 
-    for i in instances:
-        tags = {t['Key']: t['Value'] for t in i.tags or []}
-        print(', '.join((
-            i.id,
-            i.instance_type,
-            i.placement['AvailabilityZone'],
-            i.state['Name'],
-            i.public_dns_name,
-            tags.get('Project', '<no project>')
-        )))
+
+@click.group()
+def instances():
+    """Commands for instances"""
+
+
+@instances.command('list')
+@click.option('--project', default=None, help="Only instances for project (tag Project:<name>)")
+def list_instances(project) -> None:
+    """List EC2 instances"""
+    ec2_instances = filter_instances(project)
+
+    for i in ec2_instances:
+        tags = {tag['Key']: tag['Value'] for tag in i.tags or []}
+        print(', '.join((i.id,
+                         i.instance_type,
+                         i.placement['AvailabilityZone'],
+                         i.state['Name'],
+                         i.public_dns_name,
+                         tags.get('Project', '<no project>'))))
     return
 
 
 @instances.command('stop')
-@click.option('--project', default=None, help='Only instances for project')
-def stop_instances(project):
-    "Stop EC2 instances"
+@click.option('--project', default=None, help="Only instances for project (tag Project:<name>)")
+def stop_instances(project) -> None:
+    """Stop EC2 instances"""
+    ec2_instances = filter_instances(project)
 
-    instances = []
-
-    if project:
-        filters = [{'Name': 'tag:Project', 'Values': [project]}]
-        instances = ec2.instances.filter(Filters=filters)
-    else:
-        instances = ec2.instances.all()
-    for i in instances:
-        print("Stopping {0}...".format(i.id))
+    for i in ec2_instances:
+        print("Stopping {}...".format(i.id))
         i.stop()
 
-    return
+
+@instances.command('start')
+@click.option('--project', default=None, help="Only instances for project (tag Project:<name>)")
+def start_instances(project) -> None:
+    """Start EC2 instances"""
+    ec2_instances = filter_instances(project)
+
+    for i in ec2_instances:
+        print("Starting {}...".format(i.id))
+        i.start()
 
 
 if __name__ == '__main__':
-    list_instances()
+    instances()
