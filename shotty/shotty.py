@@ -1,9 +1,10 @@
+import click
 import boto3
 import botocore
-import click
 
-session = boto3.Session(profile_name='shotty')
-ec2 = session.resource('ec2')
+ec2 = boto3.client('ec2')
+response = ec2.describe_instances()
+print(response)
 
 def filter_instances(project):
     instances = []
